@@ -249,6 +249,11 @@ I18N.sq = {
 
   // ----- settings: timetable -----
   'Timetable': 'Orari',
+  'Time': 'Ora',
+  'now': 'tani',
+  'No timetable yet.': 'Ende pa orar.',
+  'Add it in Settings → Timetable.': 'Shtoje te Cilësimet → Orari.',
+  'Weeks alternate A/B; the letter above is this table\'s week.': 'Javët alternohen A/B; shkronja lart është java e kësaj tabele.',
   'Your classes for each day. One class per line, optionally with a start time, e.g. <code>08:00 Math</code>. With times, the app knows which class you\'re in right now.': 'Orët e mësimit për çdo ditë. Një lëndë për rresht, sipas dëshirës me orën e fillimit, p.sh. <code>08:00 Matematikë</code>. Me orët, aplikacioni e di në cilën orë mësimi je tani.',
   'Same every week': 'I njëjtë çdo javë',
   'Alternates A/B weeks': 'Alternon javët A/B',

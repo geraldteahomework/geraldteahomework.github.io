@@ -503,6 +503,7 @@ function render() {
   renderCalendar();
   if (state.view === 'stats') renderStats();
   if (state.view === 'subject') renderSubjectPage();
+  if (state.view === 'timetable') renderTimetableView();
   renderOfflineBadge();
 }
 
@@ -1721,6 +1722,7 @@ function switchView(view) {
   $$('.view').forEach(v => { v.hidden = v.id !== `view-${view}`; });
   if (view === 'settings') loadSettings({ full: true });
   if (view === 'stats') renderStats();
+  if (view === 'timetable') renderTimetableView();
   if (view === 'subject') renderSubjectPage();
   window.scrollTo(0, 0);
 }
@@ -1773,7 +1775,93 @@ let lastDay = todayStr();
 setInterval(() => {
   if (todayStr() !== lastDay) { lastDay = todayStr(); render(); }
   else if (state.view === 'list') { renderQuickAdd(); renderExamStrip(); renderNowBar(); }
+  else if (state.view === 'timetable') renderTimetableView();
 }, 60 * 1000);
+
+// ---------- timetable view ----------
+// The week as a table: periods down, days across, subjects in their colours, double
+// lessons merged, today's column and the lesson running right now highlighted.
+state.ttWeek = 'this';   // 'this' | 'next'
+const DAY_SHORT = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+function renderTimetableView() {
+  const el = $('#tt-page');
+  if (!hasTimetable()) {
+    el.innerHTML = `<div class="card empty">${t('No timetable yet.')} <a href="#settings">${t('Add it in Settings → Timetable.')}</a></div>`;
+    return;
+  }
+  const today = todayStr();
+  const monday = addDays(mondayOf(today), state.ttWeek === 'next' ? 7 : 0);
+  const letter = weekLetter(monday);
+  const tt = state.settings.timetable[letter];
+  const days = DAYS.filter((d, i) => i < 5 || weeksInUse().some(w => state.settings.timetable[w][d].trim()));
+  const cols = days.map((d, i) => {
+    const date = addDays(monday, DAYS.indexOf(d));
+    const hol = holidayOn(date);
+    return { d, date, hol, classes: hol ? [] : parseDay(tt[d]) };
+  });
+  const rows = Math.max(0, ...cols.map(c => c.classes.length));
+  // one time column when every day starts its periods at the same times, else times inside the cells
+  const rowTime = [];
+  for (let i = 0; i < rows; i++) {
+    const times = [...new Set(cols.map(c => c.classes[i]?.time).filter(Boolean))];
+    rowTime.push(times.length === 1 ? times[0] : null);
+  }
+  const uniform = rowTime.every((x, i) => x || cols.every(c => !c.classes[i]));
+  const now = new Date();
+  const nowIdx = state.ttWeek === 'this' ? currentClassIndex(classesOn(today), now) : -1;
+  const hhmm = mins => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  const endOf = (classes, i) => (classes[i].time && Number.isFinite(classEnd(classes, i)) ? hhmm(classEnd(classes, i)) : '');
+
+  const head = `<tr><th class="time">${uniform ? t('Time') : ''}</th>${cols.map(c => {
+    const isToday = c.date === today;
+    return `<th class="${isToday ? 'today' : ''}${c.hol ? ' hol' : ''}"><span class="dn">${t(DAY_SHORT[c.d])}</span><span class="dd">${isToday ? t('Today') : shortDate(c.date)}</span></th>`;
+  }).join('')}</tr>`;
+
+  const body = [];
+  const skip = cols.map(() => 0);   // rows still covered by a merged cell above
+  for (let i = 0; i < rows; i++) {
+    const cells = cols.map((c, ci) => {
+      if (skip[ci] > 0) { skip[ci]--; return ''; }
+      if (c.hol) return i === 0 ? `<td class="holiday" rowspan="${rows}"><div class="les hol"><span>🏖</span>${esc(c.hol.name)}</div></td>` : '';
+      const cls = c.classes[i];
+      if (!cls) return `<td class="empty">·</td>`;
+      let span = 1;
+      while (c.classes[i + span] && c.classes[i + span].subject.toLowerCase() === cls.subject.toLowerCase()) span++;
+      skip[ci] = span - 1;
+      const isNow = c.date === today && nowIdx >= i && nowIdx < i + span;
+      const timeIn = !uniform && cls.time ? `<small>${cls.time}</small>` : '';
+      return `<td${span > 1 ? ` rowspan="${span}"` : ''}><button type="button" class="les${isNow ? ' now' : ''}${span > 1 ? ' dbl' : ''}" style="--subj:${colorFor(cls.subject)}" data-subject="${esc(cls.subject)}"><span class="dot"></span><span class="nm">${esc(cls.subject)}</span>${timeIn}${isNow ? `<span class="now-tag">${t('now')}</span>` : ''}</button></td>`;
+    }).join('');
+    const ref = uniform && rowTime[i] ? cols.find(c => c.classes[i]?.time) : null;
+    const end = ref ? endOf(ref.classes, i) : '';
+    const timeCell = `<td class="time"><b>${ref ? rowTime[i] : i + 1}</b>${end ? `<span>${end}</span>` : ''}</td>`;
+    body.push(`<tr>${timeCell}${cells}</tr>`);
+  }
+
+  const weekHol = weekIsHoliday(monday) ? holidayOn(monday) : null;
+  el.innerHTML = `
+    <div class="tt-head">
+      <div>
+        <h2>${t('Timetable')}${abWeeks() ? ` <span class="tt-letter">${t('Week {letter}', { letter })}</span>` : ''}</h2>
+        <p class="muted">${shortDate(monday)} – ${shortDate(addDays(monday, days.length - 1))}${weekHol ? ` · 🏖 ${esc(weekHol.name)}` : ''}</p>
+      </div>
+      <div class="seg" id="tt-week-seg">
+        <button type="button" data-week="this" class="${state.ttWeek === 'this' ? 'active' : ''}">${t('This week')}</button>
+        <button type="button" data-week="next" class="${state.ttWeek === 'next' ? 'active' : ''}">${t('Next week')}</button>
+      </div>
+    </div>
+    <div class="tt-table-wrap"><table class="tt-table"><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>
+    ${abWeeks() ? `<p class="muted tt-foot">${t('Weeks alternate A/B; the letter above is this table\'s week.')}</p>` : ''}`;
+  // on a phone the table scrolls sideways: start on today's column
+  const wrap = $('.tt-table-wrap', el), th = $('th.today', el);
+  if (wrap && th && wrap.scrollWidth > wrap.clientWidth) wrap.scrollLeft = Math.max(0, th.offsetLeft - 70);
+}
+$('#tt-page').addEventListener('click', e => {
+  const seg = e.target.closest('#tt-week-seg button');
+  if (seg) { state.ttWeek = seg.dataset.week; renderTimetableView(); return; }
+  const les = e.target.closest('button.les[data-subject]');
+  if (les) openSubject(les.dataset.subject);
+});
 
 // ---------- links from notifications ----------
 // A tap on a phone notification opens e.g. /#item/12, /#day/2026-09-18, /#week/2026-09-21
@@ -1796,7 +1884,7 @@ function handleHash() {
     state.selectedDay = m[2];
     setCalMode(m[1]);
     switchView('calendar');
-  } else if (['list', 'calendar', 'stats', 'settings'].includes(h)) {
+  } else if (['list', 'calendar', 'timetable', 'stats', 'settings'].includes(h)) {
     switchView(h);
   }
 }
