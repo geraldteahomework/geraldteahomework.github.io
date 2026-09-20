@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-i18n-doc="app.name">Homework</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#4f6df5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Homework">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">✓</span>
+    <h1 data-i18n="app.name">Homework</h1>
+    <span id="offline" class="offline-badge" hidden></span>
+    <span id="week-badge" class="week-badge" hidden></span>
+    <span id="conn" class="conn" data-i18n-title="Live sync status" title="Live sync status"></span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-view="list" class="active" data-i18n="Checklist">Checklist</button>
+    <button data-view="calendar" data-i18n="Calendar">Calendar</button>
+    <button data-view="stats" data-i18n="Stats">Stats</button>
+    <button data-view="settings" data-i18n="Settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ CHECKLIST ============ -->
+  <section id="view-list" class="view">
+    <div id="day-bar" class="day-bar" hidden><span id="now-bar" hidden></span><span id="term-badge" class="term-badge" hidden></span></div>
+    <form id="quick-add" class="card quick-add" autocomplete="off">
+      <input id="qa-title" type="text" data-i18n-placeholder="What do you have to do?" placeholder="What do you have to do?" required enterkeyhint="done">
+      <div class="chips" id="qa-classes" hidden></div>
+      <div class="row">
+        <select id="qa-subject" class="subject-select" data-i18n-aria="Subject" aria-label="Subject"></select>
+        <select id="qa-type">
+          <option value="homework" data-i18n="Homework">Homework</option>
+          <option value="test" data-i18n="Test">Test</option>
+          <option value="quiz" data-i18n="Quiz">Quiz</option>
+          <option value="project" data-i18n="Project">Project</option>
+          <option value="study" data-i18n="Study session">Study session</option>
+          <option value="other" data-i18n="Other">Other</option>
+        </select>
+        <select id="qa-repeat" data-i18n-title="Repeat" title="Repeat">
+          <option value="" data-i18n="Once">Once</option>
+          <option value="weekly" data-i18n="Every week">Every week</option>
+          <option value="biweekly" data-i18n="Every 2 weeks">Every 2 weeks</option>
+        </select>
+      </div>
+      <div class="row date-row">
+        <div class="chips" id="qa-chips"></div>
+        <input id="qa-date" type="date" required>
+      </div>
+      <button type="submit" class="primary" data-i18n="Add">Add</button>
+    </form>
+
+    <div id="exam-strip" class="exam-strip" hidden></div>
+
+    <div class="filter-bar">
+      <input id="search" type="search" data-i18n-placeholder="Search…" placeholder="Search…" autocomplete="off">
+      <div class="chips" id="subject-filter"></div>
+    </div>
+
+    <div id="list"><div class="empty" data-i18n="Loading…">Loading…</div></div>
+  </section>
+
+  <!-- ============ CALENDAR ============ -->
+  <section id="view-calendar" class="view" hidden>
+    <div class="cal-head">
+      <button id="cal-prev" class="icon-btn" data-i18n-aria="Previous" aria-label="Previous">‹</button>
+      <h2 id="cal-title"></h2>
+      <button id="cal-next" class="icon-btn" data-i18n-aria="Next" aria-label="Next">›</button>
+      <button id="cal-today" class="ghost small" data-i18n="Today">Today</button>
+      <div class="seg" id="cal-mode">
+        <button data-mode="month" class="active" data-i18n="Month">Month</button>
+        <button data-mode="week" data-i18n="Week">Week</button>
+      </div>
+    </div>
+    <div id="cal-month">
+      <div class="cal-weekdays">
+        <span data-i18n="Mon">Mon</span><span data-i18n="Tue">Tue</span><span data-i18n="Wed">Wed</span><span data-i18n="Thu">Thu</span><span data-i18n="Fri">Fri</span><span data-i18n="Sat">Sat</span><span data-i18n="Sun">Sun</span>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <p class="muted heat-legend" data-i18n="Shading shows how busy each day is — darker means more due. Green = weekend, striped = holiday.">Shading shows how busy each day is — darker means more due. Green = weekend, striped = holiday.</p>
+    </div>
+    <div id="cal-week" class="cal-week" hidden></div>
+    <div id="cal-day" class="card cal-day"></div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="view-stats" class="view" hidden>
+    <div id="stats"></div>
+  </section>
+
+  <!-- ============ SUBJECT PAGE ============ -->
+  <section id="view-subject" class="view" hidden>
+    <button id="subject-back" class="ghost small" data-i18n="‹ Back">‹ Back</button>
+    <div id="subject-page"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="view-settings" class="view" hidden>
+    <div class="card">
+      <h2 data-i18n="Language">Language</h2>
+      <div class="row">
+        <select id="s-language" data-i18n-aria="Language" aria-label="Language"><option value="en">English</option><option value="sq">Shqip</option></select>
+        <button id="s-save-language" class="primary" data-i18n="Save">Save</button>
+      </div>
+      <p id="s-language-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Subjects">Subjects</h2>
+      <p class="muted" data-i18n="The subjects you can pick when adding homework. Each one has a colour for the calendar and its labels. Classes from your timetable are added automatically.">The subjects you can pick when adding homework. Each one has a colour for the calendar and its labels. Classes from your timetable are added automatically.</p>
+      <div id="subject-list"></div>
+      <form class="row subject-add" id="subject-add" autocomplete="off">
+        <input id="subject-new" type="text" data-i18n-placeholder="New subject (e.g. Math)" placeholder="New subject (e.g. Math)" maxlength="40" enterkeyhint="done">
+        <button type="submit" class="ghost" data-i18n="+ Add subject">+ Add subject</button>
+      </form>
+      <p id="subject-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Timetable">Timetable</h2>
+      <p class="muted" data-i18n-html="Your classes for each day. One class per line, optionally with a start time, e.g. <code>08:00 Math</code>. With times, the app knows which class you're in right now.">Your classes for each day. One class per line, optionally with a start time, e.g. <code>08:00 Math</code>. With times, the app knows which class you're in right now.</p>
+      <div class="row">
+        <label><span data-i18n="Timetable">Timetable</span>
+          <select id="tt-mode"><option value="single" data-i18n="Same every week">Same every week</option><option value="ab" data-i18n="Alternates A/B weeks">Alternates A/B weeks</option></select>
+        </label>
+        <label id="tt-this-week-label"><span data-i18n="This week is">This week is</span>
+          <select id="tt-this-week"><option value="A" data-i18n="Week A">Week A</option><option value="B" data-i18n="Week B">Week B</option></select>
+        </label>
+        <label><span data-i18n="Show">Show</span>
+          <select id="tt-days"><option value="5" data-i18n="Mon–Fri">Mon–Fri</option><option value="7" data-i18n="Mon–Sun">Mon–Sun</option></select>
+        </label>
+        <label><span data-i18n="Lesson length (min)">Lesson length (min)</span> <input id="tt-lesson" type="number" min="10" max="180" step="5" value="45"></label>
+      </div>
+      <div class="tt-weeks">
+        <div class="tt-week" id="tt-week-A"><h3 data-i18n="Week A">Week A</h3><div id="tt-A" class="tt-grid"></div></div>
+        <div class="tt-week" id="tt-week-B"><h3 data-i18n="Week B">Week B</h3><div id="tt-B" class="tt-grid"></div></div>
+      </div>
+      <div class="row"><button id="tt-copy" class="ghost" data-i18n="Copy A → B">Copy A → B</button><button id="tt-save" class="primary" data-i18n="Save timetable">Save timetable</button></div>
+      <p id="tt-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Holidays">Holidays</h2>
+      <p class="muted" data-i18n="School breaks. Repeating homework skips them, the A/B week counter pauses, and the calendar marks them.">School breaks. Repeating homework skips them, the A/B week counter pauses, and the calendar marks them.</p>
+      <div id="holiday-list"></div>
+      <div class="row"><button id="holiday-add" class="ghost" data-i18n="+ Add holiday">+ Add holiday</button><button id="holiday-save" class="primary" data-i18n="Save holidays">Save holidays</button></div>
+      <p id="holiday-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Terms">Terms</h2>
+      <p class="muted" data-i18n="Terms or semesters. The checklist counts down the school days left, grade averages and stats can be viewed per term, and completed work from earlier terms is tucked away. To start a new term, add one that begins today.">Terms or semesters. The checklist counts down the school days left, grade averages and stats can be viewed per term, and completed work from earlier terms is tucked away. To start a new term, add one that begins today.</p>
+      <div id="term-list"></div>
+      <div class="row"><button id="term-add" class="ghost" data-i18n="+ Add term">+ Add term</button><button id="term-save" class="primary" data-i18n="Save terms">Save terms</button></div>
+      <p id="term-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Grading scale">Grading scale</h2>
+      <p class="muted" data-i18n="How grades are written at your school. Changing this doesn't convert grades already entered.">How grades are written at your school. Changing this doesn't convert grades already entered.</p>
+      <div class="row">
+        <label><span data-i18n="Grades are">Grades are</span>
+          <select id="s-grade-scale"><option value="letters" data-i18n="Letters A+, A, B, C, D, E">Letters A+, A, B, C, D, E</option><option value="numbers" data-i18n="Numbers 1–10 (10 is best)">Numbers 1–10 (10 is best)</option></select>
+        </label>
+        <button id="s-save-grades" class="primary" data-i18n="Save">Save</button>
+      </div>
+      <p id="s-grades-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Repeating homework">Repeating homework</h2>
+      <p class="muted" data-i18n="Things that come back every week (or two). Upcoming ones are created automatically; add a new one from the checklist by choosing &quot;Every week&quot; when you add it.">Things that come back every week (or two). Upcoming ones are created automatically; add a new one from the checklist by choosing "Every week" when you add it.</p>
+      <div id="recurring-list"></div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Appearance">Appearance</h2>
+      <div class="row">
+        <label><span data-i18n="Theme">Theme</span>
+          <select id="s-theme"><option value="system" data-i18n="Match device">Match device</option><option value="light" data-i18n="Light">Light</option><option value="dark" data-i18n="Dark">Dark</option></select>
+        </label>
+        <label><span data-i18n="Accent colour">Accent colour</span> <input id="s-accent" type="color"></label>
+      </div>
+      <button id="s-save-appearance" class="primary" data-i18n="Save">Save</button>
+      <p id="s-appearance-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Phone notifications">Phone notifications</h2>
+      <p class="muted" data-i18n-html="Reminders are sent through <a href=&quot;https://ntfy.sh&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;>ntfy</a>, a free notification app. Install <b>ntfy</b> on your phone, subscribe to a topic name of your choosing (make it hard to guess), and enter the same name below.">
+        Reminders are sent through <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>, a free notification app.
+        Install <b>ntfy</b> on your phone, subscribe to a topic name of your choosing (make it hard to guess), and enter the same name below.
+      </p>
+      <label><span data-i18n="Topic name">Topic name</span> <input id="s-topic" type="text" placeholder="homework-a8f3k2"></label>
+      <label><span data-i18n="ntfy server">ntfy server</span> <input id="s-server" type="text" placeholder="https://ntfy.sh"></label>
+      <div class="row">
+        <button id="s-save-ntfy" class="primary" data-i18n="Save">Save</button>
+        <button id="s-test" class="ghost" data-i18n="Send test notification">Send test notification</button>
+      </div>
+      <p id="s-ntfy-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="When to remind me">When to remind me</h2>
+      <label><span data-i18n="Send reminders at">Send reminders at</span> <select id="s-remind-hour"></select></label>
+      <p class="muted" data-i18n-html="Days before the due date to get a reminder (comma-separated, e.g. <code>7, 3, 1</code>). Items with a time also get a reminder at that time.">Days before the due date to get a reminder (comma-separated, e.g. <code>7, 3, 1</code>). Items with a time also get a reminder at that time.</p>
+      <div class="grid2">
+        <label><span data-i18n="reminders.homework">Homework</span> <input id="s-days-homework" type="text"></label>
+        <label><span data-i18n="Tests">Tests</span> <input id="s-days-test" type="text"></label>
+        <label><span data-i18n="Quizzes">Quizzes</span> <input id="s-days-quiz" type="text"></label>
+        <label><span data-i18n="Projects">Projects</span> <input id="s-days-project" type="text"></label>
+        <label><span data-i18n="Study sessions">Study sessions</span> <input id="s-days-study" type="text"></label>
+        <label><span data-i18n="Other">Other</span> <input id="s-days-other" type="text"></label>
+      </div>
+      <label class="check"><input id="s-summary" type="checkbox"> <span data-i18n="Morning summary of what's due today & tomorrow">Morning summary of what's due today &amp; tomorrow</span></label>
+      <label><span data-i18n="Summary time">Summary time</span> <select id="s-summary-hour"></select></label>
+      <label class="check"><input id="s-digest" type="checkbox"> <span data-i18n="Weekly digest of what's coming next week">Weekly digest of what's coming next week</span></label>
+      <div class="row">
+        <label><span data-i18n="Digest day">Digest day</span>
+          <select id="s-digest-day"><option value="0" data-i18n="Sunday">Sunday</option><option value="6" data-i18n="Saturday">Saturday</option><option value="5" data-i18n="Friday">Friday</option><option value="1" data-i18n="Monday">Monday</option></select>
+        </label>
+        <label><span data-i18n="Digest time">Digest time</span> <select id="s-digest-hour"></select></label>
+      </div>
+      <label class="check"><input id="s-pack" type="checkbox"> <span data-i18n="Evening &quot;pack your bag&quot;: tomorrow's classes and what's due">Evening "pack your bag": tomorrow's classes and what's due</span></label>
+      <label><span data-i18n="Pack reminder time">Pack reminder time</span> <select id="s-pack-hour"></select></label>
+      <button id="s-save-reminders" class="primary" data-i18n="Save">Save</button>
+      <p id="s-reminder-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Backups">Backups</h2>
+      <p class="muted" data-i18n="A copy of your data is saved on the server once a day (the newest 30 are kept). Download one to keep it somewhere safe, or set a folder that syncs to the cloud.">A copy of your data is saved on the server once a day (the newest 30 are kept). Download one to keep it somewhere safe, or set a folder that syncs to the cloud.</p>
+      <label><span data-i18n="Backup folder">Backup folder</span> <input id="s-backup-dir" type="text" data-i18n-placeholder="Leave empty for the app's own backups folder" placeholder="Leave empty for the app's own backups folder"></label>
+      <div class="row">
+        <button id="s-save-backup" class="primary" data-i18n="Save">Save</button>
+        <button id="s-backup-now" class="ghost" data-i18n="Back up now">Back up now</button>
+        <a id="s-backup-download" class="ghost btn-link" href="api/backups/download" data-i18n="Download backup">Download backup</a>
+      </div>
+      <p id="s-backup-status" class="status"></p>
+      <ul id="backup-list" class="addr-list"></ul>
+      <h3 data-i18n="Restore">Restore</h3>
+      <p class="muted" data-i18n="Put everything back from a backup file (one you downloaded, or from the OneDrive folder). The current data is saved to the backups folder first, and your password is kept.">Put everything back from a backup file (one you downloaded, or from the OneDrive folder). The current data is saved to the backups folder first, and your password is kept.</p>
+      <div class="row restore-row">
+        <input id="s-restore-file" type="file" accept=".db,application/vnd.sqlite3,application/x-sqlite3,application/octet-stream">
+        <button id="s-restore" class="danger" data-i18n="Restore…">Restore…</button>
+      </div>
+      <p id="s-restore-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Password">Password</h2>
+      <p class="muted" data-i18n="One password for the whole app. Each device asks for it once, then remembers for a year.">One password for the whole app. Each device asks for it once, then remembers for a year.</p>
+      <label><span data-i18n="Current password">Current password</span> <input id="s-pw-current" type="password" autocomplete="current-password"></label>
+      <div class="row">
+        <label><span data-i18n="New password">New password</span> <input id="s-pw-new" type="password" autocomplete="new-password" minlength="6"></label>
+        <label><span data-i18n="Repeat">Repeat</span> <input id="s-pw-again" type="password" autocomplete="new-password" minlength="6"></label>
+      </div>
+      <div class="row">
+        <button id="s-change-pw" class="primary" data-i18n="Change password">Change password</button>
+        <button id="s-logout" class="ghost" data-i18n="Sign out on this device">Sign out on this device</button>
+      </div>
+      <p id="s-pw-status" class="status"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="Use on tablet & phone">Use on tablet &amp; phone</h2>
+      <p class="muted" data-i18n="Open one of these addresses on your other device:">Open one of these addresses on your other device:</p>
+      <ul id="s-addresses" class="addr-list"></ul>
+      <p class="muted" data-i18n-html="Android/Chrome: menu ⋮ → <b>Add to Home screen</b>. iPhone/iPad: Share → <b>Add to Home Screen</b>.">Android/Chrome: menu ⋮ → <b>Add to Home screen</b>. iPhone/iPad: Share → <b>Add to Home Screen</b>.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ============ EDIT DIALOG ============ -->
+<dialog id="edit-dialog">
+  <form id="edit-form" method="dialog">
+    <h2 id="edit-heading" tabindex="-1" autofocus>Edit</h2>
+    <label><span data-i18n="Title">Title</span> <input id="e-title" type="text" required></label>
+    <div class="row">
+      <label><span data-i18n="Subject">Subject</span> <select id="e-subject" class="subject-select"></select></label>
+      <label><span data-i18n="Type">Type</span>
+        <select id="e-type">
+          <option value="homework" data-i18n="Homework">Homework</option>
+          <option value="test" data-i18n="Test">Test</option>
+          <option value="quiz" data-i18n="Quiz">Quiz</option>
+          <option value="project" data-i18n="Project">Project</option>
+          <option value="study" data-i18n="Study session">Study session</option>
+          <option value="other" data-i18n="Other">Other</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label><span data-i18n="Due date">Due date</span> <input id="e-date" type="date" required></label>
+      <label><span data-i18n="Time (optional)">Time (optional)</span> <input id="e-time" type="time"></label>
+    </div>
+    <label><span data-i18n="Notes">Notes</span> <textarea id="e-notes" rows="3" data-i18n-placeholder="Pages, chapters, what to study…" placeholder="Pages, chapters, what to study…"></textarea></label>
+    <div class="row">
+      <label class="check"><input id="e-done" type="checkbox"> <span data-i18n="Done">Done</span></label>
+      <label class="check"><input id="e-starred" type="checkbox"> <span data-i18n="★ Starred">★ Starred</span></label>
+    </div>
+
+    <div id="e-subtasks" class="subtasks-editor" hidden>
+      <h3 data-i18n="Steps">Steps</h3>
+      <div id="e-subtask-list"></div>
+      <div class="row step-add">
+        <input id="e-subtask-new" type="text" data-i18n-placeholder="Add a step…" placeholder="Add a step…">
+        <input id="e-subtask-date" type="date" data-i18n-title="Due date for this step (optional)" title="Due date for this step (optional)">
+        <button type="button" id="e-subtask-add" class="ghost" data-i18n="Add">Add</button>
+      </div>
+    </div>
+
+    <div id="e-grade" class="grade-editor" hidden>
+      <h3 data-i18n="Grade">Grade</h3>
+      <div class="row" id="e-grade-field"></div>
+    </div>
+
+    <p id="e-recurring-note" class="muted" hidden></p>
+
+    <div class="row actions">
+      <button type="button" id="e-delete" class="danger" data-i18n="Delete">Delete</button>
+      <button type="button" id="e-duplicate" class="ghost" data-i18n="Duplicate" data-i18n-title="Same thing again for the next lesson" title="Same thing again for the next lesson">Duplicate</button>
+      <span class="spacer"></span>
+      <button type="button" id="e-cancel" class="ghost" data-i18n="Cancel">Cancel</button>
+      <button type="submit" class="primary" data-i18n="Save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ RECURRING DIALOG ============ -->
+<dialog id="rec-dialog">
+  <form id="rec-form" method="dialog">
+    <h2 data-i18n="Repeating homework" tabindex="-1" autofocus>Repeating homework</h2>
+    <label><span data-i18n="Title">Title</span> <input id="r-title" type="text" required></label>
+    <div class="row">
+      <label><span data-i18n="Subject">Subject</span> <select id="r-subject" class="subject-select"></select></label>
+      <label><span data-i18n="Type">Type</span>
+        <select id="r-type">
+          <option value="homework" data-i18n="Homework">Homework</option>
+          <option value="test" data-i18n="Test">Test</option>
+          <option value="quiz" data-i18n="Quiz">Quiz</option>
+          <option value="project" data-i18n="Project">Project</option>
+          <option value="study" data-i18n="Study session">Study session</option>
+          <option value="other" data-i18n="Other">Other</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label><span data-i18n="Repeats">Repeats</span>
+        <select id="r-interval"><option value="1" data-i18n="Every week">Every week</option><option value="2" data-i18n="Every 2 weeks">Every 2 weeks</option><option value="3" data-i18n="Every 3 weeks">Every 3 weeks</option><option value="4" data-i18n="Every 4 weeks">Every 4 weeks</option></select>
+      </label>
+      <label><span data-i18n="On">On</span> <input id="r-anchor" type="date" disabled></label>
+    </div>
+    <label><span data-i18n="Notes">Notes</span> <textarea id="r-notes" rows="2"></textarea></label>
+    <label class="check"><input id="r-active" type="checkbox"> <span data-i18n="Active">Active</span></label>
+    <div class="row actions">
+      <button type="button" id="r-delete" class="danger" data-i18n="Delete series">Delete series</button>
+      <span class="spacer"></span>
+      <button type="button" id="r-cancel" class="ghost" data-i18n="Cancel">Cancel</button>
+      <button type="submit" class="primary" data-i18n="Save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden><span id="toast-text"></span><button id="toast-undo" hidden data-i18n="Undo">Undo</button></div>
+
+<script src="./site.js"></script>
+<script src="./i18n.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
