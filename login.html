@@ -15,7 +15,9 @@
   .login h1 { font-size: 1.4rem; margin-bottom: 4px; }
   .login form { text-align: left; margin-top: 18px; }
   .login button.primary { width: 100%; }
-  .login input[type=password] { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-height: 48px; font-size: 1.05rem; }
+  .login input[type=password], .login input[type=text] { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-height: 48px; font-size: 1.05rem; }
+  .login .switch { margin-top: 14px; font-size: 0.9rem; }
+  .login .switch button { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 6px; }
 </style>
 </head>
 <body>
@@ -25,11 +27,14 @@
     <h1 data-i18n="app.name">Homework</h1>
     <p class="muted" id="hint" data-i18n="Loading…">Loading…</p>
     <form id="form" hidden>
-      <label id="l1"><span data-i18n="Password">Password</span> <input id="pw" type="password" autocomplete="current-password" required minlength="6" autofocus></label>
+      <label id="l0"><span data-i18n="First name">First name</span> <input id="name" type="text" autocomplete="username" required maxlength="20" autocapitalize="words"></label>
+      <label id="l1"><span data-i18n="Password">Password</span> <input id="pw" type="password" autocomplete="current-password" required minlength="6"></label>
       <label id="l2" hidden><span data-i18n="Repeat password">Repeat password</span> <input id="pw2" type="password" autocomplete="new-password" minlength="6"></label>
+      <label id="l3" hidden><span data-i18n="Invite code">Invite code</span> <input id="invite" type="text" autocomplete="off" autocapitalize="characters" placeholder="ABC-123"></label>
       <button type="submit" class="primary" id="btn" data-i18n="Sign in">Sign in</button>
       <p id="err" class="status err"></p>
     </form>
+    <p class="switch" id="switch" hidden></p>
   </div>
 </div>
 <script src="./site.js"></script>
@@ -38,32 +43,54 @@
 (async () => {
   const $ = s => document.querySelector(s);
   applyLanguage();
-  let setup = false;
+  const langQ = () => `?lang=${LANG}`;
+  let mode = 'login';   // 'setup' (first account = admin) | 'login' | 'signup' (with the invite code)
   await initSite();
   if (HOSTED && !API_BASE) { $('#hint').textContent = t('Cannot find the Pi right now. Is it switched on? Try again in a minute.'); return; }
   try {
-    const a = await apiFetch('/api/auth', { headers: apiHeaders(), cache: 'no-store' }).then(r => r.json());
+    const a = await apiFetch('/api/auth' + langQ(), { headers: apiHeaders(), cache: 'no-store' }).then(r => r.json());
     if (a.language && a.language !== LANG) { setLang(a.language); applyLanguage(); }
     if (a.authed) { location.replace(appUrl()); return; }
-    setup = a.setup;
+    if (a.setup) mode = 'setup';
   } catch { $('#hint').textContent = t('Cannot reach the server.'); return; }
-  $('#hint').textContent = setup ? t('First time here. Choose a password — you\'ll use it on every device, once.') : t('Enter the password to open your homework.');
-  $('#l2').hidden = !setup;
-  $('#pw').autocomplete = setup ? 'new-password' : 'current-password';
-  $('#btn').textContent = setup ? t('Set password & continue') : t('Sign in');
-  $('#form').hidden = false;
-  $('#pw').focus();
+
+  function show() {
+    const setup = mode === 'setup', signup = mode === 'signup';
+    $('#hint').textContent = setup ? t('First time here. You will be the admin: choose your first name and a password.')
+      : signup ? t('Create your account. You need the invite code from the admin.')
+      : t('Sign in with your first name and password.');
+    $('#l2').hidden = !(setup || signup);
+    $('#l3').hidden = !signup;
+    $('#pw').autocomplete = setup || signup ? 'new-password' : 'current-password';
+    $('#btn').textContent = setup ? t('Set up & continue') : signup ? t('Create account') : t('Sign in');
+    $('#switch').hidden = setup;
+    $('#switch').innerHTML = signup
+      ? `${t('Already have an account?')} <button type="button" id="to-login">${t('Sign in')}</button>`
+      : `${t('New here?')} <button type="button" id="to-signup">${t('Create an account')}</button>`;
+    $('#err').textContent = '';
+    $('#form').hidden = false;
+    $('#name').focus();
+  }
+  show();
+  $('#switch').addEventListener('click', e => {
+    if (e.target.id === 'to-signup') { mode = 'signup'; show(); }
+    if (e.target.id === 'to-login') { mode = 'login'; show(); }
+  });
   $('#form').addEventListener('submit', async e => {
     e.preventDefault();
     $('#err').textContent = '';
-    const password = $('#pw').value;
-    if (setup && password !== $('#pw2').value) { $('#err').textContent = t('Passwords don\'t match.'); return; }
+    const name = $('#name').value.trim(), password = $('#pw').value;
+    if ((mode === 'setup' || mode === 'signup') && password !== $('#pw2').value) { $('#err').textContent = t('Passwords don\'t match.'); return; }
     $('#btn').disabled = true;
     try {
-      const r = await apiFetch(setup ? '/api/setup' : '/api/login', { method: 'POST', headers: apiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ password }) });
+      const route = mode === 'setup' ? '/api/setup' : mode === 'signup' ? '/api/signup' : '/api/login';
+      const body = { name, password };
+      if (mode === 'signup') body.invite = $('#invite').value.trim();
+      const r = await apiFetch(route + langQ(), { method: 'POST', headers: apiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || t('Failed'));
       if (d.token) setAuthToken(d.token);
+      if (d.language && d.language !== LANG) setLang(d.language);
       location.replace(appUrl());
     } catch (err) { $('#err').textContent = err.message; $('#btn').disabled = false; }
   });

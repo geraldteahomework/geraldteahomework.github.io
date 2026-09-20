@@ -56,7 +56,7 @@ async function lookupDirectory() {
       const txt = (d.Answer || []).filter(a => a.type === 16).map(a => String(a.data).replace(/"\s+"/g, '').replace(/^"|"$/g, '')).join('');
       const map = {};
       for (const part of txt.split(';')) { const i = part.indexOf('='); if (i > 0) map[part.slice(0, i).trim()] = part.slice(i + 1).trim(); }
-      const url = map[SITE];
+      const url = map[SITE] || map.main;
       if (url && /^https?:\/\//.test(url)) return url.replace(/\/+$/, '');
     } catch { /* try the next resolver */ }
   }

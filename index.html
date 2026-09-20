@@ -247,17 +247,19 @@
 
     <div class="card">
       <h2 data-i18n="Backups">Backups</h2>
-      <p class="muted" data-i18n="A copy of your data is saved on the server once a day (the newest 30 are kept). Download one to keep it somewhere safe, or set a folder that syncs to the cloud.">A copy of your data is saved on the server once a day (the newest 30 are kept). Download one to keep it somewhere safe, or set a folder that syncs to the cloud.</p>
-      <label><span data-i18n="Backup folder">Backup folder</span> <input id="s-backup-dir" type="text" data-i18n-placeholder="Leave empty for the app's own backups folder" placeholder="Leave empty for the app's own backups folder"></label>
+      <p class="muted" data-i18n="Download a file with all of your homework, grades and settings to keep somewhere safe. The server also saves a copy of everyone's data once a day.">Download a file with all of your homework, grades and settings to keep somewhere safe. The server also saves a copy of everyone's data once a day.</p>
+      <div class="admin-only" hidden>
+        <label><span data-i18n="Backup folder">Backup folder</span> <input id="s-backup-dir" type="text" data-i18n-placeholder="Leave empty for the app's own backups folder" placeholder="Leave empty for the app's own backups folder"></label>
+      </div>
       <div class="row">
-        <button id="s-save-backup" class="primary" data-i18n="Save">Save</button>
-        <button id="s-backup-now" class="ghost" data-i18n="Back up now">Back up now</button>
-        <a id="s-backup-download" class="ghost btn-link" href="api/backups/download" data-i18n="Download backup">Download backup</a>
+        <a id="s-backup-download" class="ghost btn-link" href="api/backups/download" data-i18n="Download my backup">Download my backup</a>
+        <button id="s-save-backup" class="primary admin-only" hidden data-i18n="Save">Save</button>
+        <button id="s-backup-now" class="ghost admin-only" hidden data-i18n="Back up now">Back up now</button>
       </div>
       <p id="s-backup-status" class="status"></p>
-      <ul id="backup-list" class="addr-list"></ul>
+      <ul id="backup-list" class="addr-list admin-only" hidden></ul>
       <h3 data-i18n="Restore">Restore</h3>
-      <p class="muted" data-i18n="Put everything back from a backup file (one you downloaded, or from the OneDrive folder). The current data is saved to the backups folder first, and your password is kept.">Put everything back from a backup file (one you downloaded, or from the OneDrive folder). The current data is saved to the backups folder first, and your password is kept.</p>
+      <p class="muted" data-i18n="Put your data back from a backup file (one you downloaded, or the server's daily copy). Only your own homework, grades and settings are replaced; a safety copy is saved first and your password is kept.">Put your data back from a backup file (one you downloaded, or the server's daily copy). Only your own homework, grades and settings are replaced; a safety copy is saved first and your password is kept.</p>
       <div class="row restore-row">
         <input id="s-restore-file" type="file" accept=".db,application/vnd.sqlite3,application/x-sqlite3,application/octet-stream">
         <button id="s-restore" class="danger" data-i18n="Restore…">Restore…</button>
@@ -266,8 +268,9 @@
     </div>
 
     <div class="card">
-      <h2 data-i18n="Password">Password</h2>
-      <p class="muted" data-i18n="One password for the whole app. Each device asks for it once, then remembers for a year.">One password for the whole app. Each device asks for it once, then remembers for a year.</p>
+      <h2 data-i18n="Account">Account</h2>
+      <p class="muted" id="s-whoami"></p>
+      <p class="muted" data-i18n="Your password. Each device asks for it once, then remembers for a year.">Your password. Each device asks for it once, then remembers for a year.</p>
       <label><span data-i18n="Current password">Current password</span> <input id="s-pw-current" type="password" autocomplete="current-password"></label>
       <div class="row">
         <label><span data-i18n="New password">New password</span> <input id="s-pw-new" type="password" autocomplete="new-password" minlength="6"></label>
@@ -278,6 +281,33 @@
         <button id="s-logout" class="ghost" data-i18n="Sign out on this device">Sign out on this device</button>
       </div>
       <p id="s-pw-status" class="status"></p>
+    </div>
+
+    <div class="card admin-only" id="admin-card" hidden>
+      <h2 data-i18n="People">People</h2>
+      <p class="muted" data-i18n="Everyone with an account. New people join from the sign-in page with the invite code; you can also add someone here, reset a forgotten password, or remove an account (that deletes their data).">Everyone with an account. New people join from the sign-in page with the invite code; you can also add someone here, reset a forgotten password, or remove an account (that deletes their data).</p>
+      <div class="invite-row">
+        <span data-i18n="Invite code">Invite code</span>
+        <code id="invite-code">…</code>
+        <button id="invite-copy" class="ghost small" data-i18n="Copy">Copy</button>
+        <button id="invite-new" class="ghost small" data-i18n="New code">New code</button>
+      </div>
+      <div id="user-list"></div>
+      <form class="row user-add" id="user-add" autocomplete="off">
+        <input id="ua-name" type="text" data-i18n-placeholder="First name" placeholder="First name" maxlength="20" required>
+        <input id="ua-pw" type="text" data-i18n-placeholder="First password (they can change it)" placeholder="First password (they can change it)" minlength="6" required>
+        <button type="submit" class="ghost" data-i18n="+ Add person">+ Add person</button>
+      </form>
+      <details class="import-old">
+        <summary data-i18n="Import someone's old copy">Import someone's old copy</summary>
+        <p class="muted" data-i18n="A backup file from the old one-person version becomes a new account, with its password, settings, homework and grades.">A backup file from the old one-person version becomes a new account, with its password, settings, homework and grades.</p>
+        <div class="row">
+          <input id="ui-name" type="text" data-i18n-placeholder="First name" placeholder="First name" maxlength="20">
+          <input id="ui-file" type="file" accept=".db,application/vnd.sqlite3,application/x-sqlite3,application/octet-stream">
+          <button id="ui-go" class="ghost" data-i18n="Import">Import</button>
+        </div>
+      </details>
+      <p id="admin-status" class="status"></p>
     </div>
 
     <div class="card">

@@ -1545,9 +1545,73 @@ $('#subject-list').addEventListener('change', e => {
   const name = input.closest('.subject-row').dataset.subject;
   saveSettings({ subject_colors: { ...(state.settings?.subject_colors || {}), [name]: input.value } }, '#subject-status');
 });
+// ----- admin: people and the invite code -----
+async function renderAdmin() {
+  try {
+    const [users, inv] = await Promise.all([api('/api/admin/users'), api('/api/admin/invite')]);
+    $('#invite-code').textContent = inv.code;
+    const me = state.settings?.user?.id;
+    $('#user-list').innerHTML = users.map(u => `<div class="user-row" data-uid="${u.id}">
+        <div class="who"><b>${esc(u.name)}</b>${u.admin ? ` <span class="badge">${t('admin')}</span>` : ''}<small>${t('{n} items', { n: u.items })} · ${u.last_seen ? t('last seen {when}', { when: agoLabel(u.last_seen) }) : t('never signed in')}</small></div>
+        ${u.id === me ? '' : `<button type="button" class="ghost small u-rename">${t('Rename')}</button><button type="button" class="ghost small u-reset">${t('Reset password')}</button><button type="button" class="danger small u-remove" aria-label="${t('Remove')}">✕</button>`}
+      </div>`).join('');
+  } catch (err) { setStatus('#admin-status', err.message, false); }
+}
+$('#invite-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('#invite-code').textContent); setStatus('#admin-status', t('Invite code copied.'), true); }
+  catch { setStatus('#admin-status', $('#invite-code').textContent, true); }
+});
+$('#invite-new').addEventListener('click', async () => {
+  if (!confirm(t('Make a new invite code? The old one stops working.'))) return;
+  try { const r = await api('/api/admin/invite', { method: 'POST' }); $('#invite-code').textContent = r.code; setStatus('#admin-status', t('New invite code: {code}', { code: r.code }), true); }
+  catch (err) { setStatus('#admin-status', err.message, false); }
+});
+$('#user-add').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    const u = await api('/api/admin/users', { method: 'POST', body: { name: $('#ua-name').value, password: $('#ua-pw').value } });
+    setStatus('#admin-status', t('Account for {name} created. Tell them their first password; they can change it in Settings.', { name: u.name }), true);
+    $('#ua-name').value = ''; $('#ua-pw').value = '';
+    renderAdmin();
+  } catch (err) { setStatus('#admin-status', err.message, false); }
+});
+$('#user-list').addEventListener('click', async e => {
+  const row = e.target.closest('.user-row'); if (!row) return;
+  const uid = Number(row.dataset.uid), name = $('.who b', row).textContent;
+  try {
+    if (e.target.closest('.u-rename')) {
+      const n = prompt(t('New first name for {name}:', { name }), name); if (n === null) return;
+      await api(`/api/admin/users/${uid}`, { method: 'PATCH', body: { name: n } });
+      setStatus('#admin-status', t('Renamed.'), true); renderAdmin();
+    } else if (e.target.closest('.u-reset')) {
+      const pw = prompt(t('New password for {name} (at least 6 characters). They sign in with it and can change it afterwards.', { name })); if (pw === null) return;
+      await api(`/api/admin/users/${uid}`, { method: 'PATCH', body: { password: pw } });
+      setStatus('#admin-status', t('Password for {name} reset. Their other devices will need to sign in again.', { name }), true);
+    } else if (e.target.closest('.u-remove')) {
+      if (!confirm(t('Remove {name} and everything they have entered? This cannot be undone.', { name }))) return;
+      await api(`/api/admin/users/${uid}`, { method: 'DELETE' });
+      setStatus('#admin-status', t('{name} removed.', { name }), true); renderAdmin();
+    }
+  } catch (err) { setStatus('#admin-status', err.message, false); }
+});
+$('#ui-go').addEventListener('click', async () => {
+  const file = $('#ui-file').files[0], name = $('#ui-name').value.trim();
+  if (!name || !file) return setStatus('#admin-status', t('Give the first name and choose the .db file.'), false);
+  setStatus('#admin-status', t('Importing…'), true);
+  try {
+    const res = await apiFetch(`/api/admin/import?name=${encodeURIComponent(name)}`, { method: 'POST', body: file, headers: apiHeaders({ 'Content-Type': 'application/octet-stream' }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || t('Request failed ({status})', { status: res.status }));
+    setStatus('#admin-status', t('Imported {name}: {items} items, {grades} grades. They sign in with the password from their old copy.', { name: d.user.name, items: d.counts.assignments, grades: d.counts.grades }), true);
+    $('#ui-name').value = ''; $('#ui-file').value = '';
+    renderAdmin();
+  } catch (err) { setStatus('#admin-status', err.message, false); }
+});
+
 async function renderBackups() {
   try {
     const b = await api('/api/backups');
+    if (!b.dir) { $('#backup-list').innerHTML = ''; return; }
     $('#backup-list').innerHTML = b.backups.length
       ? `<li><small>${t('Folder on the server: {dir}', { dir: esc(b.dir) })}</small></li>` + b.backups.slice(0, 5).map(x => `<li>${esc(x.file)} <small>(${Math.round(x.size / 1024)} KB)</small></li>`).join('')
       : `<li><small>${t('No backups yet — the first one is made a few seconds after the app starts. Folder: {dir}', { dir: esc(b.dir) })}</small></li>`;
@@ -1566,6 +1630,10 @@ async function loadSettings({ full = false } = {}) {
   }
   if (!full) return;
   const s = state.settings;
+  const me = s.user || {};
+  $$('.admin-only').forEach(el => { el.hidden = !me.admin; });
+  $('#s-whoami').textContent = me.name ? (me.admin ? t('Signed in as {name} (admin).', { name: me.name }) : t('Signed in as {name}.', { name: me.name })) : '';
+  if (me.admin) renderAdmin();
   $('#s-topic').value = s.ntfy_topic;
   $('#s-server').value = s.ntfy_server;
   hourOptions($('#s-remind-hour'), s.remind_hour);

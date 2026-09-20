@@ -1,7 +1,7 @@
 // Service worker: caches the app shell so the page opens without a connection.
 // Data always comes from the network; offline changes are queued by app.js.
 // Paths are relative to where the app is served from (/ on the Pi, /homework/ on the fixed link).
-const CACHE = 'homework-shell-v11';
+const CACHE = 'homework-shell-v12';
 const ROOT = new URL('./', self.location).href;
 const SHELL = ['./', './index.html', './login.html', './style.css', './site.js', './i18n.js', './app.js', './manifest.json', './manifest-sq.json', './icons/icon-192.png']
   .map(p => new URL(p, self.location).href);
