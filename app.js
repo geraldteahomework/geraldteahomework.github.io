@@ -782,7 +782,23 @@ function dateChipOptions() {
   add(t('Next week'), schoolDayOnOrAfter(addDays(today, 7)));
   return chips;
 }
+// In a lesson right now? Then the add box starts on that subject (and its next lesson as the
+// date), until you pick something else yourself. The next lesson takes over again.
+let qaAutoClass = null;   // subject the app last picked by itself
+function autoPickSubject(now = new Date()) {
+  const sel = $('#qa-subject');
+  const classes = hasTimetable() ? classesOn(todayStr()) : [];
+  const idx = currentClassIndex(classes, now);
+  const current = idx >= 0 ? classes[idx].subject : '';
+  if (current !== qaAutoClass) { qaAutoClass = current; sel.dataset.touched = ''; }   // a new lesson: start fresh
+  if (sel.dataset.touched) return;
+  const want = current ? subjectOptions().find(s => s.toLowerCase() === current.toLowerCase()) || '' : '';
+  if (subjectOf(sel) === want) return;
+  sel.value = want; sel.dataset.prev = want;
+  qaDate.value = (want && nextLesson(want)) || nextSchoolDay();
+}
 function renderQuickAdd() {
+  autoPickSubject();
   const chips = dateChipOptions();
   $('#qa-chips').innerHTML = chips.map(c => `<button type="button" data-date="${c.date}" class="${c.date === qaDate.value ? 'active' : ''}">${esc(c.label)}</button>`).join('');
   const wrap = $('#qa-classes');
@@ -806,7 +822,7 @@ function pickSubject(subject) {
 }
 qaDate.value = nextSchoolDay();
 qaDate.addEventListener('change', () => renderQuickAdd());
-$('#qa-subject').addEventListener('change', () => { const nl = nextLesson(subjectOf($('#qa-subject'))); if (nl) setQaDate(nl); else renderQuickAdd(); });
+$('#qa-subject').addEventListener('change', () => { const sel = $('#qa-subject'); sel.dataset.touched = subjectOf(sel) === (qaAutoClass || '') ? '' : '1'; const nl = nextLesson(subjectOf(sel)); if (nl) setQaDate(nl); else renderQuickAdd(); });
 $('#qa-chips').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setQaDate(b.dataset.date); });
 $('#qa-classes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) pickSubject(b.dataset.subject); });
 let adding = false;
@@ -827,6 +843,8 @@ $('#quick-add').addEventListener('submit', async e => {
     const created = await createItem(fields);
     $('#qa-title').value = '';
     $('#qa-repeat').value = '';
+    $('#qa-subject').dataset.touched = '';   // back to the lesson you are in, if any
+    renderQuickAdd();
     $('#qa-title').focus();
     if (!created.pending) toast(repeat ? t('Added — repeats automatically') : t('Added'));
     if (repeat) loadRecurring();
