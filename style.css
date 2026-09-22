@@ -680,3 +680,27 @@ details.completed summary h3 { margin-bottom: 0; }
 .import-old { margin-top: 12px; }
 .import-old summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 .import-old .row { margin-top: 8px; }
+
+/* ===== installed app (pinned to the Windows taskbar / dock) ===== */
+/* Once installed there is no browser chrome, so the app gets a little more room
+   and the header behaves like a real title bar. */
+@media (display-mode: standalone), (display-mode: minimal-ui), (display-mode: window-controls-overlay) {
+  body { overscroll-behavior-y: none; }
+  .brand { user-select: none; -webkit-user-select: none; }
+}
+/* Windows/Chromium only: the window buttons float over our own header, so the
+   brand row *is* the title bar (drag it to move the window). */
+@media (display-mode: window-controls-overlay) {
+  .topbar { padding: 0 0 8px; }
+  .brand {
+    max-width: none;
+    min-height: env(titlebar-area-height, 34px);
+    padding-left: calc(env(titlebar-area-x, 0px) + 16px);
+    padding-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 10px);
+    -webkit-app-region: drag; app-region: drag;
+  }
+  .brand h1 { font-size: 1.02rem; }
+  .logo { width: 22px; height: 22px; border-radius: 7px; font-size: 13px; box-shadow: none; }
+  .brand button, .brand a, .brand input, .brand select { -webkit-app-region: no-drag; app-region: no-drag; }
+  .tabs { width: calc(100% - 32px); margin-top: 6px; }
+}

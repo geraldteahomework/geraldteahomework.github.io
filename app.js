@@ -841,9 +841,13 @@ $('#quick-add').addEventListener('submit', async e => {
   adding = true;
   try {
     const created = await createItem(fields);
+    // everything back to the starting state (the lesson you are in, if any, is picked again)
     $('#qa-title').value = '';
     $('#qa-repeat').value = '';
-    $('#qa-subject').dataset.touched = '';   // back to the lesson you are in, if any
+    $('#qa-type').value = 'homework';
+    const sel = $('#qa-subject'); sel.value = ''; sel.dataset.prev = ''; sel.dataset.touched = '';
+    qaAutoClass = null;
+    qaDate.value = nextSchoolDay();
     renderQuickAdd();
     $('#qa-title').focus();
     if (!created.pending) toast(repeat ? t('Added — repeats automatically') : t('Added'));
@@ -1970,6 +1974,9 @@ function handleHash() {
     state.selectedDay = m[2];
     setCalMode(m[1]);
     switchView('calendar');
+  } else if (h === 'add') {              // "Add homework" in the Windows taskbar menu
+    switchView('list');
+    $('#qa-title').focus();
   } else if (['list', 'calendar', 'timetable', 'stats', 'settings'].includes(h)) {
     switchView(h);
   }
